@@ -37,7 +37,6 @@ plt.show()
 
 #  f'(x) = -1/(x²(1+x²)) - 2x
 
-
 eps = np.array([0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])
 N_bysection = np.array([0, 3, 6, 9, 13, 16])
 N_chord = np.array([2, 3, 4, 5, 6, 7])
