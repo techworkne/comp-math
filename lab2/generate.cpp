@@ -4,6 +4,7 @@
 #include <random>
 #include <cmath>
 #include <iomanip>
+#include <string>
 
 using namespace std;
 
@@ -20,10 +21,9 @@ void generateRandomDiagonallyDominant(int n, vector<vector<double>>& A, vector<d
                 sum += std::abs(A[i][j]);
             }
         }
-        // Обеспечиваем диагональное преобладание
-        A[i][i] = sum + std::abs(dist(gen)) + 1.0; 
+        A[i][i] = sum + std::abs(dist(gen)) + 1.0;
         if (dist(gen) < 0) A[i][i] = -A[i][i];
-        
+
         b[i] = dist(gen);
     }
 }
@@ -33,14 +33,14 @@ void generateHilbert(int n, vector<vector<double>>& A, vector<double>& b) {
         b[i] = 0.0;
         for (int j = 0; j < n; ++j) {
             A[i][j] = 1.0 / (i + j + 1.0);
-            b[i] += A[i][j]; // Если сумма строк, то точное решение x = [1, 1, ..., 1]
+            b[i] += A[i][j];
         }
     }
 }
 
 int main(int argc, char* argv[]) {
     if (argc != 4) {
-        cout << "Использование: " << argv[0] << " <размер_n> <тип: 1-Случайная, 2-Гильберт> <имя_файла>\n";
+        cout << "неверные арги\n";
         return 1;
     }
 
@@ -53,18 +53,18 @@ int main(int argc, char* argv[]) {
 
     if (type == 1) {
         generateRandomDiagonallyDominant(n, A, b);
-        cout << "Сгенерирована случайная матрица с диагональным преобладанием.\n";
+        cout << "сгенерирована случайная матрица с диагональным преобладанием\n";
     } else if (type == 2) {
         generateHilbert(n, A, b);
-        cout << "Сгенерирована матрица Гильберта.\n";
+        cout << "сгенерирована матрица Гильберта\n";
     } else {
-        cout << "Неизвестный тип матрицы!\n";
+        cout << "введенно неверное значение\n";
         return 1;
     }
 
     ofstream out(filename);
     if (!out.is_open()) {
-        cerr << "Ошибка создания файла!\n";
+        cerr << "ошибка создания файла!\n";
         return 1;
     }
 
@@ -75,8 +75,8 @@ int main(int argc, char* argv[]) {
         }
         out << b[i] << "\n";
     }
-    
+
     out.close();
-    cout << "Данные записаны в " << filename << "\n";
+    cout << "данные записаны в " << filename << "\n";
     return 0;
 }
