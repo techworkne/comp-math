@@ -24,43 +24,43 @@ double df(double x) {
 // считаю веса. w_i = 1 / "*" (x_i - x_j)
 // классика: от 0 до n-1 "+" (y_i * ( "*" (x - x_j) / "*" (x_i - x_j) ) )
 vector<double> barycentricWeights(const vector<double>& x) {
-    const int n = (int)x.size();
-    vector<double> w(n, 1.0);
+    const int nodeCount = (int)x.size();
+    vector<double> weights(nodeCount, 1.0);
 
-    for (size_t i = 0; i < n; ++i) {
+    for (size_t i = 0; i < nodeCount; ++i) {
         long double prod = 1.0L;
-        for (size_t j = 0; j < n; ++j) {
+        for (size_t j = 0; j < nodeCount; ++j) {
             if (i == j) continue;
             prod *= (x[i] - x[j]);
         }
-        w[i] = 1.0 / (double)prod;
+        weights[i] = 1.0 / (double)prod;
     }
 
     // нормирую веса (|| < 1 (улучшение численной устойчивости))
-    double mx = 0.0;
-    for (double wi : w) mx = max(mx, fabs(wi));
-    if (mx > 0) {
-        for (double& wi : w) wi /= mx;
+    double maxWeight = 0.0;
+    for (double wi : weights) maxWeight = max(maxWeight, fabs(wi));
+    if (maxWeight > 0) {
+        for (double& wi : weights) wi /= maxWeight;
     }
 
-    return w;
+    return weights;
 }
 
 
 double lagrangeBarycentric(const vector<double>& x, const vector<double>& y,
-                           const vector<double>& w, double xq) {
+                           const vector<double>& weights, double xq) {
     const double eps = 1e-14;
-    const int n = (int)x.size();
+    const int nodeCount  = (int)x.size();
 
     // проверка на совпадение с узлом
-    for (size_t i = 0; i < n; ++i) {
+    for (size_t i = 0; i < nodeCount; ++i) {
         if (fabs(xq - x[i]) < eps) return y[i];
     }
 
 
     long double up = 0.0L, down = 0.0L;
-    for (size_t i = 0; i < n; ++i) {
-        long double part = (long double)w[i] / (xq - x[i]);
+    for (size_t i = 0; i < nodeCount ; ++i) {
+        long double part = (long double)weights[i] / (xq - x[i]);
         up += part * y[i];
         down += part;
     }
@@ -80,11 +80,11 @@ vector<double> solveTridiagonal(const vector<double>& a, const vector<double>& b
 
     // x_i ​= dp_i​ − ( cp_i​ ⋅ x_i+1​ )
 
-    // прямой ход. 
+    // прямой ход.
     for (size_t i = 1; i < n; ++i) {
-        double denom = b[i] - a[i] * cp[i - 1];
-        if (i < n - 1) cp[i] = c[i] / denom;
-        dp[i] = (d[i] - a[i] * dp[i - 1]) / denom;
+        double divisor = b[i] - a[i] * cp[i - 1];
+        if (i < n - 1) cp[i] = c[i] / divisor;
+        dp[i] = (d[i] - a[i] * dp[i - 1]) / divisor;
     }
 
     // обратный. из последнего x_n-1 = dp_n-1
@@ -104,7 +104,7 @@ struct CubicSpline {
     vector<double> y;
     vector<double> M;   // вторые производные
 
-    double eval(double xq) const {
+    double interpolate(double xq) const {
         const int n = (int)x.size();
         if (xq <= x.front()) return y.front();
         if (xq >= x.back())  return y.back();
@@ -129,15 +129,15 @@ struct CubicSpline {
 // закреплённый кубический сплайн
 // граничные условия: S'(a) = f'(a), S'(b) = f'(b)
 CubicSpline buildClampedCubicSpline(const vector<double>& x, const vector<double>& y) {
-    const int n = (int)x.size();
+    const int nodeCount = (int)x.size();
     CubicSpline spline;
     spline.x = x;
     spline.y = y;
-    spline.M.assign(n, 0.0);
+    spline.M.assign(nodeCount, 0.0);
 
-    if (n <= 2) return spline; // сплайн интерполяция не определена
+    if (nodeCount <= 2) return spline; // сплайн интерполяция не определена
 
-    const int N = n;
+    const int N = nodeCount;
     vector<double> a(N, 0.0), b(N, 0.0), c(N, 0.0), d(N, 0.0);
 
     // левая граница (i = 0). S′(x0​)=f′(x0​) =>
@@ -147,7 +147,7 @@ CubicSpline buildClampedCubicSpline(const vector<double>& x, const vector<double
     d[0] = (y[1] - y[0]) / h1 - df(x[0]);
 
     // внутренние узлы (i = 1 ... n-2)
-    for (size_t i = 1; i <= n - 2; ++i) {
+    for (size_t i = 1; i <= nodeCount - 2; ++i) {
         double hPrev = x[i] - x[i - 1];
         double hNext = x[i + 1] - x[i];
 
@@ -158,22 +158,22 @@ CubicSpline buildClampedCubicSpline(const vector<double>& x, const vector<double
     }
 
     // правая граница (i = n-1).  S′(x_n−1)=f′(x_n−1)
-    double hLast = x[n - 1] - x[n - 2];
-    a[n - 1] = hLast / 6.0;
-    b[n - 1] = hLast / 3.0;
-    d[n - 1] = df(x[n - 1]) - (y[n - 1] - y[n - 2]) / hLast;
+    double hLast = x[nodeCount - 1] - x[nodeCount - 2];
+    a[nodeCount - 1] = hLast / 6.0;
+    b[nodeCount - 1] = hLast / 3.0;
+    d[nodeCount - 1] = df(x[nodeCount - 1]) - (y[nodeCount - 1] - y[nodeCount - 2]) / hLast;
 
     // решаем трёхдиагональную систему
     vector<double> M_all = solveTridiagonal(a, b, c, d);
 
-    for (size_t i = 0; i < n; ++i) {
+    for (size_t i = 0; i < nodeCount; ++i) {
         spline.M[i] = M_all[i];
     }
 
     return spline;
 }
 
-struct Sample {
+struct DataPoint {
     double x;
     double fx;
     double px;
@@ -184,24 +184,31 @@ struct Sample {
 
 int main() {
     const double A = 0.1;
-    const double B = 5.0;
+    const double B = 2.0;
 
-    int n;
+    int nodeCount;
     cout << "введите число узлов n: ";
-    cin >> n;
+    cin >> nodeCount;
 
-    if (n < 3) {
+    if (nodeCount < 3) {
         cerr << "ошибка: n должно быть >= 3\n";
         return 1;
     }
 
-    vector<double> x(n), y(n);
-    double h = (B - A) / (n - 1);
+    vector<double> x(nodeCount), y(nodeCount);
+    double h = (B - A) / (nodeCount - 1);
 
-    for (size_t i = 0; i < n; ++i) {
+    for (size_t i = 0; i < nodeCount; ++i) {
         x[i] = A + i * h;
         y[i] = f(x[i]);
     }
+
+    ofstream nodesOut("nodes.csv");
+    nodesOut << "x,y\n";
+    for (int i = 0; i < nodeCount; ++i) {
+        nodesOut << setprecision(15) << x[i] << "," << y[i] << "\n";
+    }
+    nodesOut.close();
 
     // считаем узлы
     vector<double> w = barycentricWeights(x);
@@ -213,14 +220,14 @@ int main() {
     cout << fixed << setprecision(10);
     cout << "\nузлы интерполяции:\n";
     cout << "i\t x_i\t\t f(x_i)\n";
-    for (size_t i = 0; i < n; ++i) {
+    for (size_t i = 0; i < nodeCount; ++i) {
         cout << i << "\t " << x[i] << "\t " << y[i] << "\n";
     }
 
     // сетка
     const int Nfine = 1000;
-    vector<Sample> samples;
-    samples.reserve(Nfine + 1);
+    vector<DataPoint> datas;
+    datas.reserve(Nfine + 1);
 
     double maxErrP = 0.0;
     double maxErrS = 0.0;
@@ -231,7 +238,7 @@ int main() {
 
         double fx = f(xx);
         double px = lagrangeBarycentric(x, y, w, xx);
-        double sx = spline.eval(xx);
+        double sx = spline.interpolate(xx);
 
         double errP = fabs(px - fx);
         double errS = fabs(sx - fx);
@@ -239,7 +246,7 @@ int main() {
         maxErrP = max(maxErrP, errP);
         maxErrS = max(maxErrS, errS);
 
-        samples.push_back({xx, fx, px, sx, errP, errS});
+        datas.push_back({xx, fx, px, sx, errP, errS});
     }
 
     cout << "\nмаксимальная ошибка на мелкой сетке:\n";
@@ -249,7 +256,7 @@ int main() {
 
     ofstream out("data.csv");
     out << "x,f(x),lagrange,spline,err_lagrange,err_spline\n";
-    for (const auto& s : samples) {
+    for (const auto& s : datas) {
         out << setprecision(15)
             << s.x << ","
             << s.fx << ","
